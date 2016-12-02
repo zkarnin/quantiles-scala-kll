@@ -1,5 +1,6 @@
-package quantiles
+package quantiles.vectors
 
+import quantiles.Sampler
 
 import scala.reflect.ClassTag
 
@@ -9,7 +10,9 @@ import scala.reflect.ClassTag
 
 
 /**
-  * sketching object for computing quantiles of a sequence of numbers
+  * sketching object for computing quantiles of a sequence of vectors
+  * The quantiles are taken independently per entry. This implementation
+  * has little overhead compared to having a separate sketch per entry
   *
   * @param sketchSize amount of memory that the sketcher can use
   * @param shrinkingFactor internal parameter, determines the shrinking
@@ -19,12 +22,12 @@ import scala.reflect.ClassTag
   *           have an order. Specifically Ordering[T] should be allowed to
   *           exist
   */
-class QuantileSketch[T](val sketchSize: Int,
-                        private val shrinkingFactor: Double = 0.64)
-                       (implicit ordering: Ordering[T],
+class VectorQuantileSketch[T](val sketchSize: Int,
+                              private val shrinkingFactor: Double = 0.64)
+                             (implicit ordering: Ordering[T],
                         ct: ClassTag[T]) extends Serializable{
 
-  private val maxCompactorNum = {
+  private val maxCompactorNum : Int = {
     var n : Double= sketchSize
     var ret=0
     while (n>2) {
@@ -36,8 +39,8 @@ class QuantileSketch[T](val sketchSize: Int,
   private var curNumOfCompactors = 0
   private var maxCompactorHeight = 0
 
-  private val compactors = Array.fill[Compactor[T]](maxCompactorNum)(null)
-  private var sampler : Sampler[T] = null
+  private val compactors = Array.fill[VectorCompactor[T]](maxCompactorNum)(null)
+  private var sampler : Sampler[Array[T]] = null
   private val numberOfLayersWithMaximalSketchSize=1
 
 
@@ -46,7 +49,7 @@ class QuantileSketch[T](val sketchSize: Int,
     *
     * @param item new item observed by the sketch
     */
-  def update(item: T): Unit = {
+  def update(item: Array[T]): Unit = {
     if (maxCompactorHeight-curNumOfCompactors==0) {
       updateToCompactors(item,0)
     } else {
@@ -56,7 +59,7 @@ class QuantileSketch[T](val sketchSize: Int,
 
   /**
     *
-    * @return memory currently consumed by the sketch
+    * @return number of vectors currently stored consumed by the sketch
     */
   def itemMemSize(): Int = {
     var k: Double =sketchSize
@@ -69,7 +72,7 @@ class QuantileSketch[T](val sketchSize: Int,
     ret+1
   }
 
-  private def updateSampler(item:T,weight:Long) = {
+  private def updateSampler(item:Array[T],weight:Long) = {
     val out = sampler.update(item,weight)
     if (out.isDefined) {
       updateToCompactors(out.get,maxCompactorHeight-curNumOfCompactors)
@@ -91,7 +94,7 @@ class QuantileSketch[T](val sketchSize: Int,
   }
 
   private def samplerOutputHeight = maxCompactorHeight-curNumOfCompactors
-  private def update(item: T, weight: Long): Unit = {
+  private def update(item: Array[T], weight: Long): Unit = {
     if (weight < (1L << samplerOutputHeight)) {
       updateSampler(item,weight)
     } else {
@@ -103,7 +106,7 @@ class QuantileSketch[T](val sketchSize: Int,
 
 
 
-  private def updateToCompactors(item: T, height: Int) : Unit= {
+  private def updateToCompactors(item: Array[T], height: Int) : Unit= {
     // check if a new compactors needs to be added
     if (height >= maxCompactorHeight)
       addCompactor(item,height)
@@ -117,21 +120,21 @@ class QuantileSketch[T](val sketchSize: Int,
   }
 
 
-  private def growSampler(item:T) = {
+  private def growSampler(item:Array[T]) = {
     if (sampler==null) {
-      sampler = new Sampler[T](item)
+      sampler = new Sampler[Array[T]](item)
     }
     sampler.grow()
   }
 
-  private def addCompactor(item: T, height: Int): Unit = {
+  private def addCompactor(item: Array[T], height: Int): Unit = {
     assert(height== maxCompactorHeight)
     maxCompactorHeight+=1
 
     // either we assign a new compactor or get rid of the smallest one
     if (curNumOfCompactors < maxCompactorNum) {
       // assign a new compactor
-      compactors(curNumOfCompactors) = new Compactor[T](sketchSize,item)
+      compactors(curNumOfCompactors) = new VectorCompactor[T](sketchSize,item)
       curNumOfCompactors+=1
     } else {
       // assign new compactor, discard bottom one, but keep its buffer
@@ -168,7 +171,7 @@ class QuantileSketch[T](val sketchSize: Int,
     * @param that another sketch
     * @return the merged sketch
     */
-  def merge(that: QuantileSketch[T]) : QuantileSketch[T] = {
+  def merge(that: VectorQuantileSketch[T]) : VectorQuantileSketch[T] = {
     if (maxCompactorHeight < that.maxCompactorHeight) {
       return that.merge(this)
     }
@@ -188,9 +191,9 @@ class QuantileSketch[T](val sketchSize: Int,
     this
   }
 
-  private def output: Array[(T,Long)] = {
+  private def output(col: Int): Array[(T,Long)] = {
     compactors.slice(0,curNumOfCompactors).zipWithIndex.flatMap{case (compactor,i) =>
-      compactor.getItems.map((_,1L << i))
+      compactor.getItems.map(item => (item(col),1L << i))
     }
   }
 
@@ -198,10 +201,11 @@ class QuantileSketch[T](val sketchSize: Int,
     * the quantile values of the sketch
     *
     * @param q number of quantiles required
+    * @param vectorIndex index of vector for which we want the quantiles
     * @return quantiles 1/q through (q-1)/q
     */
-  def quantiles(q: Int) : Array[T] = {
-    val sortedItems = output.sortBy(_._1)
+  def quantiles(q: Int, vectorIndex: Int) : Array[T] = {
+    val sortedItems = output(vectorIndex).sortBy(_._1)
     val size = sortedItems.map(_._2).sum
     var nextThresh = size/q
     var curq = 1

@@ -16,9 +16,22 @@ class Compactor[T](var bufferSize: Int,
                   (implicit ordering: Ordering[T],
                    ct: ClassTag[T]) extends Serializable {
   var buffer: Array[T] = Array.fill[T](bufferSize)(someValue)
-  var items=0
-  var newBufferSize = bufferSize
+  private var items=0
+  private var newBufferSize = bufferSize
   var fractionalSize : Double = bufferSize
+
+  /**
+    *
+    * @return number of items currently in the buffer
+    */
+  def getItemCount : Int = items
+
+  /**
+    *
+    * @return items currently in the buffer
+    */
+  def getItems : Array[T] = buffer.slice(0,items)
+
 
   /**
     * reset the compactor

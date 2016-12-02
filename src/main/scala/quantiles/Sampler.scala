@@ -1,6 +1,5 @@
 package quantiles
 
-import scala.reflect.ClassTag
 import scala.util.Random
 
 /**
@@ -9,12 +8,25 @@ import scala.util.Random
   * @param someValue an arbitrary item
   * @tparam T the type of items to be sampled
   */
-class Sampler[T](val someValue: T)
-                (implicit ordering: Ordering[T],
-                 ct: ClassTag[T]) extends Serializable{
-  var outputWeight = 1L // weight of outputted items
-  var curWeight = 0L // weight of items seen from last output
-  var reserved = someValue // value of the currently stored item
+class Sampler[T](val someValue: T) extends Serializable{
+  private var outputWeight = 1L // weight of outputted items
+  private var curWeight = 0L // weight of items seen from last output
+  private var reserved = someValue // value of the currently stored item
+
+  /**
+    * value of the currently stored item
+    */
+  def getCurrentReserved : T = reserved
+
+  /**
+    * weight of items seen from last output
+    */
+  def getCurWeight : Long = curWeight
+
+  /**
+    * weight of outputted items
+    */
+  def getOutputWeight : Long = outputWeight
 
   /**
     * update the sketch with an item of integer weight
