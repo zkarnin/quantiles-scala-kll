@@ -1,5 +1,7 @@
 package quantiles.vectors
 
+import quantiles.util.ColumnWiseSort
+
 import scala.reflect.ClassTag
 import scala.util.Random
 
@@ -58,18 +60,11 @@ class VectorCompactor[T](var bufferSize: Int,
     fractionalSize = bufSize
   }
 
-  private def sortEntrywiseInternally(buffLen: Int) : Unit = {
-    for (col <- 0 until vectorDim) {
-      // sort vector buff[.][i] inplace
-      HeapSort.heapSort(buffer,col,buffLen)
-    }
-  }
 
   private def compact : Array[Array[T]] = {
     val len = items - (items % 2)
     val offset = if (Random.nextBoolean()) 1 else 0
-
-    sortEntrywiseInternally(len)
+    ColumnWiseSort.sortall(buffer,vectorDim,len)
     val output = (offset until len by 2).map(buffer(_)).toArray
     buffer(0)=buffer(math.max(items-1,0))
     items = items % 2

@@ -1,11 +1,12 @@
-package quantiles.vectors
+package quantiles.util
 
 import scala.reflect.ClassTag
+import scala.util.Random
 
 /**
   * Created by zkarnin on 12/2/16.
   */
-object HeapSort {
+object ColumnWiseHeapSort {
   private def buildMaxHeap[T] (a: Array[Array[T]], col: Int, size: Int)
                               (implicit ordering: Ordering[T],
                                ct: ClassTag[T]): Unit = {
@@ -39,8 +40,8 @@ object HeapSort {
     a(j)(col) = t
   }                                         //> swap: (a: Array[Int], i: Int, j: Int)Unit
 
-  def heapSort[T] (a: Array[Array[T]], col: Int, len: Int)
-                  (implicit ordering: Ordering[T],
+  def sort[T](a: Array[Array[T]], col: Int, len: Int)
+             (implicit ordering: Ordering[T],
                    ct: ClassTag[T]){
     buildMaxHeap(a, col, len)
     for (i <- len-1 to 0 by -1) {
@@ -49,18 +50,4 @@ object HeapSort {
     }
   }
 
-  def main(args: Array[String]): Unit = {
-    val a = Array(
-      Array(1,2,3,4),
-      Array(-1,23,42,324),
-      Array(234,10,55,23),
-      Array(-129,4,5,58)
-    )
-
-    heapSort(a,0,4)
-    heapSort(a,1,4)
-    heapSort(a,2,4)
-    heapSort(a,3,4)
-    println(a.map(b=>b.mkString("\t")).mkString("\n"))
-  }
 }
