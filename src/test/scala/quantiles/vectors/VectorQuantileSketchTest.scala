@@ -25,9 +25,6 @@ class VectorQuantileSketchTest extends FlatSpec with Matchers {
           math.abs(x._1.toDouble / n - x._2 / q)
         }.max
     }
-    println(errs.mkString(","))
-    println(memSize)
-    println(errs.map(_*memSize).mkString(","))
 
     assert(errs.forall(err=> err < 0.05))
     assert(errs.forall(err=>err*memSize<20))
@@ -58,9 +55,6 @@ class VectorQuantileSketchTest extends FlatSpec with Matchers {
           math.abs(x._1.toDouble / (merges*n) - x._2 / q)
         }.max
     }
-    println(errs.mkString(","))
-    println(memSize)
-    println(errs.map(_*memSize).mkString(","))
 
     assert(errs.forall(err=> err < 0.05))
     assert(errs.forall(err=>err*memSize<20))
