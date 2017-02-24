@@ -8,30 +8,36 @@ import scala.util.Random
   */
 object ColumnWiseQuickSort {
 
-  def sort[T](xs: Array[Array[T]],col: Int, len:Int)(implicit ordering: Ordering[T],
-                              ct: ClassTag[T]) {
+  def sort[T](arr: Array[Array[T]], col: Int, len:Int)(implicit ordering: Ordering[T],
+                                                       ct: ClassTag[T]) {
     def swap(i: Int, j: Int) {
-      val t = xs(i)(col); xs(i)(col) = xs(j)(col); xs(j)(col) = t
+      val t = arr(i)(col)
+      arr(i)(col) = arr(j)(col)
+      arr(j)(col) = t
     }
-    def sort1(low: Int, high: Int) {
 
-      //val pivot = xs((l + r) / 2)(col)
-      val pivot = xs(if (high>low+1) Random.nextInt(high-low)+low else 0)(col)
+    // sort elements in interval [low,high)
+    def sort1(low: Int, high: Int) : Unit = {
+      if (high <= low+1) return
+
+      val pivot = arr(Random.nextInt(high-low)+low)(col)
 
       var i = low; var j = high-1
-      while (i < j) {
+      while (i <= j) {
+        while (i<high && ordering.compare(arr(i)(col),pivot)<0) i += 1
+        while (j>= low && ordering.compare(arr(j)(col),pivot)>0) j -= 1
 
-        while (ordering.compare(xs(i)(col),pivot)<0) i += 1
-        while (j>= low && ordering.compare(xs(j)(col),pivot)>=0) j -= 1
         if (i <= j) {
           swap(i, j)
           i += 1
           j -= 1
         }
       }
-      if (low < i-1) sort1(low, i)
-      if (i < high-1) sort1(i, high)
+
+      if (low < j) sort1(low, j+1)
+      if (j <= high) sort1(i, high)
     }
+
     sort1(0, len)
   }
 }

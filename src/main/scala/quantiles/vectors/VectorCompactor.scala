@@ -64,7 +64,7 @@ class VectorCompactor[T](var bufferSize: Int,
   private def compact : Array[Array[T]] = {
     val len = items - (items % 2)
     val offset = if (Random.nextBoolean()) 1 else 0
-    ColumnWiseSort.sortall(buffer,vectorDim,len)
+    ColumnWiseSort.sortAll(buffer,vectorDim,len)
     val output = (offset until len by 2).map(buffer(_)).toArray
     buffer(0)=buffer(math.max(items-1,0))
     items = items % 2

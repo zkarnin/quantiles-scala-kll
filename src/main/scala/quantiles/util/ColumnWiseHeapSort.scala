@@ -10,25 +10,24 @@ object ColumnWiseHeapSort {
   private def buildMaxHeap[T] (a: Array[Array[T]], col: Int, size: Int)
                               (implicit ordering: Ordering[T],
                                ct: ClassTag[T]): Unit = {
-    val hs = size / 2
-    for (i <- 0 to hs) {
-      maxHeap(a, col, hs - i, size)
+    val halfSize = size / 2
+    for (i <- 0 to halfSize) {
+      maxHeap(a, col, halfSize - i, size)
     }
   }                                         //> buildMaxHeap: (a: Array[Int], size: Int)Unit
 
   private def maxHeap [T] (a: Array[Array[T]], col: Int, i: Int, size: Int)
                           (implicit ordering: Ordering[T],
                            ct: ClassTag[T]): Unit = {
-    val l = 2*i+1
-    val r = 2*i+2
-    var m = -1
+    val leftChild = 2*i+1
+    val rightChild = 2*i+2
 
+    var indexOfMax = if (leftChild < size && ordering.compare(a(leftChild)(col),a(i)(col)) >= 0) {leftChild} else i
+    indexOfMax = if (rightChild < size && ordering.compare(a(rightChild)(col),a(indexOfMax)(col)) >= 0) {rightChild} else indexOfMax
 
-    m = if (l < size && ordering.compare(a(l)(col),a(i)(col)) >= 0) {l} else i
-    m = if (r < size && ordering.compare(a(r)(col),a(m)(col)) >= 0) {r} else m
-    if (m != i) {
-      swap(a, col, i, m)
-      maxHeap(a, col, m, size)
+    if (indexOfMax != i) {
+      swap(a, col, i, indexOfMax)
+      maxHeap(a, col, indexOfMax, size)
     }
   }                                         //> maxHeap: (a: Array[Int], i: Int, size: Int)Unit
 
@@ -48,6 +47,8 @@ object ColumnWiseHeapSort {
       swap(a, col, 0, i)
       maxHeap(a, col, 0, i)
     }
+
+
   }
 
 }

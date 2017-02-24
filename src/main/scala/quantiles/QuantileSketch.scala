@@ -16,8 +16,7 @@ import scala.reflect.ClassTag
   *                        of the buffers in the different layers
   *                        (see code for further explanation)
   * @tparam T type of items to be observed in the sketch. The items should
-  *           have an order. Specifically Ordering[T] should be allowed to
-  *           exist
+  *           have an order. Specifically Ordering[T] should exist
   */
 class QuantileSketch[T](val sketchSize: Int,
                         private val shrinkingFactor: Double = 0.64)
@@ -101,8 +100,6 @@ class QuantileSketch[T](val sketchSize: Int,
     }
   }
 
-
-
   private def updateToCompactors(item: T, height: Int) : Unit= {
     // check if a new compactors needs to be added
     if (height >= maxCompactorHeight)
@@ -110,16 +107,16 @@ class QuantileSketch[T](val sketchSize: Int,
     // update. If something got back, feed it
     val output = compactors(height-samplerOutputHeight).update(item)
     if (output!=null) {
-      output.foreach{subitem =>
-        updateToCompactors(subitem,height+1)
+      output.foreach{subItem =>
+        updateToCompactors(subItem,height+1)
       }
     }
   }
 
 
-  private def growSampler(item:T) = {
+  private def growSampler() = {
     if (sampler==null) {
-      sampler = new Sampler[T](item)
+      sampler = new Sampler[T]
     }
     sampler.grow()
   }
@@ -145,7 +142,7 @@ class QuantileSketch[T](val sketchSize: Int,
 
       // handle the sampler: grow its output size, then feed it the buffer
       // of the discarded compactor
-      growSampler(item)
+      growSampler()
       oldCompactorItems.foreach{it =>
         updateSampler(it, 1L << (maxCompactorHeight-curNumOfCompactors-1))
       }
@@ -156,7 +153,8 @@ class QuantileSketch[T](val sketchSize: Int,
       compactors(i).shrink(shrinkingFactor)
     }
     if (curNumOfCompactors>=numberOfLayersWithMaximalSketchSize) {
-      compactors(curNumOfCompactors-numberOfLayersWithMaximalSketchSize).shrink(math.pow(shrinkingFactor,numberOfLayersWithMaximalSketchSize))
+      compactors(curNumOfCompactors-numberOfLayersWithMaximalSketchSize).shrink(
+        math.pow(shrinkingFactor,numberOfLayersWithMaximalSketchSize))
     }
 
   }

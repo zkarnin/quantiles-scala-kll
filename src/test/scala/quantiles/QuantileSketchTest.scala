@@ -10,47 +10,54 @@ class QuantileSketchTest extends FlatSpec with Matchers {
 
 
   "sketch" should "not crash or have a huge error for simple stream" in {
-    val k = 40000
-    val m = new QuantileSketch[Int](k)
-    val memSize = m.itemMemSize()
-    val n = 1000000
-    (1 to n / 2).foreach { x =>
-      val i = x //Random.nextInt(100000)
-      m.update(i)
-      m.update(n + 1 - i)
-    }
-    var q = 20.0
+    for (k <- Array(100,1000,50000)) {
+      val qSketch = new QuantileSketch[Int](k)
+      val memSize = qSketch.itemMemSize()
+      val streamLen = 1000000
+      (1 to streamLen / 2).foreach { i =>
+        // test on zoom-in sketch: 1, n, 2, n-1, ...
+        qSketch.update(i)
+        qSketch.update(streamLen + 1 - i)
+      }
 
-    val err = (m.quantiles(q.toInt) zip (1 until q.toInt))
-      .map{x =>
-        math.abs(x._1.toDouble / n - x._2 / q)
-      }.max
-    err < 0.05 should be (true)
-    err*memSize<10 should be(true)
+      // number of quantiles we need
+      var qCount = 20.0
+
+      val err = (qSketch.quantiles(qCount.toInt) zip (1 until qCount.toInt))
+        .map{ case (estimateQuantile, qIndex) =>
+          val normalizedEstimate = estimateQuantile.toDouble / streamLen
+          val trueQuantile = qIndex / qCount
+          math.abs(normalizedEstimate - trueQuantile)
+        }.max
+      err*memSize<20 should be(true)
+    }
   }
 
-  "sketch" should "not crash or have a huge error for merged" in {
-    val k = 400
-    var lastMerge = new QuantileSketch[Int](k)
-    val n = 100000
-    val merges = 10
-    for (merge <- 0 until merges) {
-      var newMerge = new QuantileSketch[Int](k)
-      (1 to n / 2).foreach { i =>
-        newMerge.update(i+merge*n)
-        newMerge.update(merge*n+n + 1 - i)
+  "sketch" should "not crash or have a huge error for merged stream" in {
+    for (k <- Array(100,1000,50000)) {
+      var lastMerge = new QuantileSketch[Int](k)
+      val partitionLen = 100000
+      val merges = 10
+      for (merge <- 0 until merges) {
+        var newMerge = new QuantileSketch[Int](k)
+        (1 to partitionLen / 2).foreach { i =>
+          newMerge.update(i+merge*partitionLen)
+          newMerge.update(merge*partitionLen+partitionLen + 1 - i)
+        }
+        lastMerge = lastMerge.merge(newMerge)
       }
-      lastMerge = lastMerge.merge(newMerge)
+
+      // number of quantiles we need
+      var qCount = 20.0
+
+      val err = (lastMerge.quantiles(qCount.toInt) zip (1 until qCount.toInt))
+        .map{case (estimateQuantile, qIndex) =>
+          val normalizedEstimate = estimateQuantile.toDouble / (partitionLen*merges)
+          val trueQuantile = qIndex / qCount
+          math.abs(normalizedEstimate - trueQuantile)
+        }.max
+      err*k<10 should be(true)
     }
-
-    var q = 20.0
-
-    val err = (lastMerge.quantiles(q.toInt) zip (1 until q.toInt))
-      .map{x =>
-        math.abs(x._1.toDouble / (n*merges) - x._2 / q)
-      }.max
-    err < 0.05 should be (true)
-    err*k<10 should be(true)
   }
 
 

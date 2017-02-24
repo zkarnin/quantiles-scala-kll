@@ -120,9 +120,9 @@ class VectorQuantileSketch[T](val sketchSize: Int,
   }
 
 
-  private def growSampler(item:Array[T]) = {
+  private def growSampler() = {
     if (sampler==null) {
-      sampler = new Sampler[Array[T]](item)
+      sampler = new Sampler[Array[T]]
     }
     sampler.grow()
   }
@@ -148,7 +148,7 @@ class VectorQuantileSketch[T](val sketchSize: Int,
 
       // handle the sampler: grow its output size, then feed it the buffer
       // of the discarded compactor
-      growSampler(item)
+      growSampler()
       oldCompactorItems.foreach{it =>
         updateSampler(it, 1L << (maxCompactorHeight-curNumOfCompactors-1))
       }

@@ -5,13 +5,12 @@ import scala.util.Random
 /**
   * Sampling sketch that samples items (roughly) uniformly from a stream
   *
-  * @param someValue an arbitrary item
   * @tparam T the type of items to be sampled
   */
-class Sampler[T](val someValue: T) extends Serializable{
+class Sampler[T] extends Serializable{
   private var outputWeight = 1L // weight of outputted items
   private var curWeight = 0L // weight of items seen from last output
-  private var reserved = someValue // value of the currently stored item
+  private var reserved : T = _ // value of the currently stored item
 
   /**
     * value of the currently stored item
@@ -56,7 +55,7 @@ class Sampler[T](val someValue: T) extends Serializable{
       val largerWeight = math.max(curWeight,weight)
       curWeight = math.min(curWeight,weight)
 
-
+      // output newItem with prob. largerWeight/outputWeight. Otherwise output nothing.
       if (  (((Random.nextLong() % outputWeight)+outputWeight)%outputWeight) < largerWeight)
         Some(newItem)
       else None
